@@ -3,6 +3,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
+import math
+import cmath
 
 box_points = []
 button_down = False
@@ -10,7 +12,7 @@ button_down = False
 def rotate_image(image, angle):
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     rot_mat = cv2.getRotationMatrix2D(image_center, -angle, 1.0)
-    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR,borderValue=255)
     return result
 
 def scale_image(image, percent, maxwh):
@@ -18,7 +20,6 @@ def scale_image(image, percent, maxwh):
     max_height = maxwh[0]
     max_percent_width = max_width / image.shape[1] * 100
     max_percent_height = max_height / image.shape[0] * 100
-    max_percent = 0
     if max_percent_width < max_percent_height:
         max_percent = max_percent_width
     else:
@@ -29,38 +30,6 @@ def scale_image(image, percent, maxwh):
     height = int(image.shape[0] * percent / 100)
     result = cv2.resize(image, (width, height), interpolation = cv2.INTER_AREA)
     return result, percent
-
-def click_and_crop(event, x, y, flags, param):
-    global box_points, button_down
-    if (button_down == False) and (event == cv2.EVENT_LBUTTONDOWN):
-        button_down = True
-        box_points = [(x, y)]
-    elif (button_down == True) and (event == cv2.EVENT_MOUSEMOVE):
-        image_copy = param.copy()
-        point = (x, y)
-        cv2.rectangle(image_copy, box_points[0], point, (0, 255, 0), 2)
-        cv2.imshow("Template Cropper - Press C to Crop", image_copy)
-    elif event == cv2.EVENT_LBUTTONUP:
-        button_down = False
-        box_points.append((x, y))
-        cv2.rectangle(param, box_points[0], box_points[1], (0, 255, 0), 2)
-        cv2.imshow("Template Cropper - Press C to Crop", param)
-
-# GUI template cropping tool
-def template_crop(image):
-    clone = image.copy()
-    cv2.namedWindow("Template Cropper - Press C to Crop")
-    param = image
-    cv2.setMouseCallback("Template Cropper - Press C to Crop", click_and_crop, param)
-    while True:
-        cv2.imshow("Template Cropper - Press C to Crop", image)
-        key = cv2.waitKey(1)
-        if key == ord("c"):
-            cv2.destroyAllWindows()
-            break
-    if len(box_points) == 2:
-        cropped_region = clone[box_points[0][1]:box_points[1][1], box_points[0][0]:box_points[1][0]]
-    return cropped_region
 
 def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdiff_thresh, rot_range, rot_interval, scale_range, scale_interval, rm_redundant):
     """
@@ -91,6 +60,9 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
                 rotated_template = scaled_template_gray
             else:
                 rotated_template = rotate_image(scaled_template_gray, next_angle)
+                if next_scale == 100 and next_angle == 15:
+                    plt.imshow(rotated_template)
+                    plt.show()
             if method == "TM_CCOEFF":
                 matched_points = cv2.matchTemplate(img_gray, rotated_template, cv2.TM_CCOEFF)
                 satisfied_points = np.where(matched_points >= matched_thresh)
@@ -147,11 +119,12 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
         if total_diff < rgbdiff_thresh:
             color_filtered_list.append([point_info[0],point_info[1],point_info[2]])
     print(color_filtered_list)
+    print("laatste lijn?")
     return color_filtered_list
 
 
 def main():
-    img_bgr = cv2.imread('images/image_3a.jpg')
+    img_bgr = cv2.imread('images/image_3b.jpg')
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     template_bgr = plt.imread('images/template_3a.jpg')
     template_rgb = cv2.cvtColor(template_bgr, cv2.COLOR_BGR2RGB)
@@ -159,15 +132,13 @@ def main():
     cropped_template_rgb = np.array(template_rgb)
     cropped_template_gray = cv2.cvtColor(cropped_template_rgb, cv2.COLOR_RGB2GRAY)
     height, width = cropped_template_gray.shape
-    fig = plt.figure(num='Template - Close the Window to Continue >>>')
     plt.imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY))
     plt.show()
     plt.imshow(cropped_template_gray)
     plt.show()
-
     cv2.matchTemplate(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY), cropped_template_gray, cv2.TM_CCOEFF)
 
-    points_list = invariantMatchTemplate(img_rgb, cropped_template_rgb, "TM_CCOEFF_NORMED", 0.8, 500, [0, 360], 10, [100, 150], 10, True)
+    points_list = invariantMatchTemplate(img_rgb, cropped_template_rgb, "TM_CCOEFF_NORMED", 0.8, 500, [0, 90], 5, [50, 150], 5, True)
     fig, ax = plt.subplots(1)
     ax.imshow(img_rgb)
     centers_list = []
@@ -197,3 +168,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
