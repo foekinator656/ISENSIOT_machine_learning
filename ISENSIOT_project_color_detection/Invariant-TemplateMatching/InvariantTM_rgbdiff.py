@@ -4,16 +4,17 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
 import math
-import cmath
 
 box_points = []
 button_down = False
+
 
 def rotate_image(image, angle):
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     rot_mat = cv2.getRotationMatrix2D(image_center, -angle, 1.0)
     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR,borderValue=255)
     return result
+
 
 def scale_image(image, percent, maxwh):
     max_width = maxwh[1]
@@ -30,6 +31,7 @@ def scale_image(image, percent, maxwh):
     height = int(image.shape[0] * percent / 100)
     result = cv2.resize(image, (width, height), interpolation = cv2.INTER_AREA)
     return result, percent
+
 
 def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdiff_thresh, rot_range, rot_interval, scale_range, scale_interval, rm_redundant):
     """
@@ -118,8 +120,6 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
         print(total_diff)
         if total_diff < rgbdiff_thresh:
             color_filtered_list.append([point_info[0],point_info[1],point_info[2]])
-    print(color_filtered_list)
-    print("laatste lijn?")
     return color_filtered_list
 
 def calculateDistance(point1, point2):
@@ -129,7 +129,7 @@ def calculateDistance(point1, point2):
 
 
 def main():
-    img_bgr = cv2.imread('images/image_3b.jpg')
+    img_bgr = cv2.imread('images/image_4a.jpg')
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     template_bgr = plt.imread('images/template_3a.jpg')
     template_rgb = cv2.cvtColor(template_bgr, cv2.COLOR_BGR2RGB)
@@ -143,7 +143,7 @@ def main():
     plt.show()
     cv2.matchTemplate(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY), cropped_template_gray, cv2.TM_CCOEFF)
 
-    points_list = invariantMatchTemplate(img_rgb, cropped_template_rgb, "TM_CCOEFF_NORMED", 0.8, 500, [0, 90], 5, [50, 150], 5, True)
+    points_list = invariantMatchTemplate(img_rgb, cropped_template_rgb, "TM_CCOEFF_NORMED", 0.8, 500, [0, 90], 10, [50, 150], 10, True)
     fig, ax = plt.subplots(1)
     ax.imshow(img_rgb)
     centers_list = []
@@ -163,22 +163,18 @@ def main():
 
         if maxDistance == distance2:
             temp_point = point3
-            point3 = point2
-            point2 = temp_point
-        if maxDistance == distance3:
-            temp_point = point3
             point3 = point1
             point1 = temp_point
+        if maxDistance == distance3:
+            temp_point = point3
+            point3 = point2
+            point2 = temp_point
 
-        difference1 = (point1[0] - point3[0], point3[1] - point1[1])
-        difference2 = (point2[0] - point3[0], point3[1] - point2[1])
+        difference1 = (point1[0] - point3[0], point1[1] - point3[1])
+        difference2 = (point2[0] - point3[0], point2[1] - point3[1])
 
         point4 = (point3[0] + difference1[0] + difference2[0], point3[1] + difference1[1] + difference2[1])
-        print(difference1)
-        print(difference2)
-        print(point4)
         plt.scatter(point4[0] + width / 2, point4[1] + height / 2, s=20, color="red")
-
 
 
     for point_info in points_list:
