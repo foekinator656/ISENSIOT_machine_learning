@@ -122,6 +122,11 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
     print("laatste lijn?")
     return color_filtered_list
 
+def calculateDistance(point1, point2):
+    return math.sqrt(
+        (point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2
+    )
+
 
 def main():
     img_bgr = cv2.imread('images/image_3b.jpg')
@@ -142,6 +147,40 @@ def main():
     fig, ax = plt.subplots(1)
     ax.imshow(img_rgb)
     centers_list = []
+
+
+    if len(points_list) == 3:
+        # 3 punten we meten de afstand tussen elk van deze punten
+        point1 = points_list[0][0]
+        point2 = points_list[1][0]
+        point3 = points_list[2][0]
+
+        distance1 = calculateDistance(point1, point2)  #point 1 and 2
+        distance2 = calculateDistance(point2, point3)  #point 2 and 3
+        distance3 = calculateDistance(point3, point1)  #point 3 and 1
+
+        maxDistance = max(distance1, distance2, distance3)
+
+        if maxDistance == distance2:
+            temp_point = point3
+            point3 = point2
+            point2 = temp_point
+        if maxDistance == distance3:
+            temp_point = point3
+            point3 = point1
+            point1 = temp_point
+
+        difference1 = (point1[0] - point3[0], point3[1] - point1[1])
+        difference2 = (point2[0] - point3[0], point3[1] - point2[1])
+
+        point4 = (point3[0] + difference1[0] + difference2[0], point3[1] + difference1[1] + difference2[1])
+        print(difference1)
+        print(difference2)
+        print(point4)
+        plt.scatter(point4[0] + width / 2, point4[1] + height / 2, s=20, color="red")
+
+
+
     for point_info in points_list:
         point = point_info[0]
         angle = point_info[1]
