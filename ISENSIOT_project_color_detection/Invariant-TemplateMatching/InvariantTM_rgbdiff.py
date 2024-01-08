@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
 import math
+import time
 
 box_points = []
 button_down = False
@@ -62,9 +63,6 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
                 rotated_template = scaled_template_gray
             else:
                 rotated_template = rotate_image(scaled_template_gray, next_angle)
-                if next_scale == 100 and next_angle == 15:
-                    plt.imshow(rotated_template)
-                    plt.show()
             if method == "TM_CCOEFF":
                 matched_points = cv2.matchTemplate(img_gray, rotated_template, cv2.TM_CCOEFF)
                 satisfied_points = np.where(matched_points >= matched_thresh)
@@ -122,6 +120,7 @@ def invariantMatchTemplate(rgbimage, rgbtemplate, method, matched_thresh, rgbdif
             color_filtered_list.append([point_info[0],point_info[1],point_info[2]])
     return color_filtered_list
 
+
 def calculateDistance(point1, point2):
     return math.sqrt(
         (point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2
@@ -129,7 +128,9 @@ def calculateDistance(point1, point2):
 
 
 def main():
-    img_bgr = cv2.imread('images/image_4a.jpg')
+    start = time.time()
+    print(start)
+    img_bgr = cv2.imread('images/image_4.jpg')
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     template_bgr = plt.imread('images/template_3a.jpg')
     template_rgb = cv2.cvtColor(template_bgr, cv2.COLOR_BGR2RGB)
@@ -137,17 +138,13 @@ def main():
     cropped_template_rgb = np.array(template_rgb)
     cropped_template_gray = cv2.cvtColor(cropped_template_rgb, cv2.COLOR_RGB2GRAY)
     height, width = cropped_template_gray.shape
-    plt.imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY))
-    plt.show()
-    plt.imshow(cropped_template_gray)
-    plt.show()
+
     cv2.matchTemplate(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY), cropped_template_gray, cv2.TM_CCOEFF)
 
     points_list = invariantMatchTemplate(img_rgb, cropped_template_rgb, "TM_CCOEFF_NORMED", 0.8, 500, [0, 90], 10, [50, 150], 10, True)
     fig, ax = plt.subplots(1)
     ax.imshow(img_rgb)
     centers_list = []
-
 
     if len(points_list) == 3:
         # 3 punten we meten de afstand tussen elk van deze punten
@@ -174,8 +171,11 @@ def main():
         difference2 = (point2[0] - point3[0], point2[1] - point3[1])
 
         point4 = (point3[0] + difference1[0] + difference2[0], point3[1] + difference1[1] + difference2[1])
-        plt.scatter(point4[0] + width / 2, point4[1] + height / 2, s=20, color="red")
-
+        point4Actual = (int(point4[0] + width / 2), int(point4[1] + height / 2))
+        plt.scatter(point4Actual[0], point4Actual[1], s=20, color="red")
+        colourSquare = img_rgb[point4Actual[1] - 5:point4Actual[1] + 5, point4Actual[0] - 5:point4Actual[0] + 5]
+        average = colourSquare.mean(axis=0).mean(axis=0)
+        print(average)
 
     for point_info in points_list:
         point = point_info[0]
@@ -199,6 +199,10 @@ def main():
         scale = point_info[1]
         plt.scatter(point[0]+width/2*scale/100, point[1]+height/2*scale/100, s=20, color="red")
     plt.show()
+    plt.imshow(colourSquare)
+    plt.show()
+    end = time.time()
+    print(end - start)
 
 
 if __name__ == "__main__":
